@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion Control Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-zone.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .preview-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        
+        .timeline-track {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .control-knob {
+            transition: transform 0.2s ease;
+        }
+        
+        .control-knob:hover {
+            transform: scale(1.1);
+        }
+        
+        .motion-path {
+            stroke-dasharray: 5, 5;
+            animation: dash 20s linear infinite;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -100; }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        .processing-overlay {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
+        }
+        
+        .slider-custom {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        .slider-custom::-webkit-slider-track {
+            background: #e2e8f0;
+            border-radius: 100px;
+            height: 6px;
+        }
+        
+        .slider-custom::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            height: 20px;
+            width: 20px;
+            border: 3px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        
+        .slider-custom::-moz-range-track {
+            background: #e2e8f0;
+            border-radius: 100px;
+            height: 6px;
+        }
+        
+        .slider-custom::-moz-range-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            height: 20px;
+            width: 20px;
+            border: 3px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-video text-3xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">Motion Control Studio</h1>
+                        <p class="text-sm opacity-90">Transform images with reference video motion</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="glass-effect px-4 py-2 rounded-lg hover:bg-white/20 transition">
+                        <i class="fas fa-question-circle mr-2"></i>Help
+                    </button>
+                    <button class="glass-effect px-4 py-2 rounded-lg hover:bg-white/20 transition">
+                        <i class="fas fa-cog mr-2"></i>Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Upload Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+                <i class="fas fa-upload mr-2 text-purple-600"></i>Upload Media
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Image Upload -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Source Image</h3>
+                    <div id="imageUploadZone" class="upload-zone rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition">
+                        <i class="fas fa-image text-4xl text-gray-400 mb-3"></i>
+                        <p class="text-gray-600 mb-2">Drag & drop your image here</p>
+                        <p class="text-sm text-gray-500">or</p>
+                        <button class="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                            Browse Files
+                        </button>
+                        <input type="file" id="imageInput" accept="image/*" class="hidden">
+                        <p class="text-xs text-gray-400 mt-3">Supports: JPG, PNG, GIF (Max 10MB)</p>
+                    </div>
+                    <div id="imagePreview" class="mt-4 hidden">
+                        <div class="preview-container relative">
+                            <img id="imagePreviewEl" src="" alt="Preview" class="w-full rounded-lg">
+                            <button class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <p id="imageInfo" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+
+                <!-- Video Upload -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Reference Video</h3>
+                    <div id="videoUploadZone" class="upload-zone rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition">
+                        <i class="fas fa-video text-4xl text-gray-400 mb-3"></i>
+                        <p class="text-gray-600 mb-2">Drag & drop your video here</p>
+                        <p class="text-sm text-gray-500">or</p>
+                        <button class="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                            Browse Files
+                        </button>
+                        <input type="file" id="videoInput" accept="video/*" class="hidden">
+                        <p class="text-xs text-gray-400 mt-3">Supports: MP4, MOV, AVI (Max 100MB)</p>
+                    </div>
+                    <div id="videoPreview" class="mt-4 hidden">
+                        <div class="preview-container relative">
+                            <video id="videoPreviewEl" src="" controls class="w-full rounded-lg"></video>
+                            <button class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <p id="videoInfo" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Motion Controls -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+                <i class="fas fa-sliders-h mr-2 text-purple-600"></i>Motion Controls
+            </h2>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <!-- Motion Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Motion Type</label>
+                        <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <option>Follow Path</option>
+                            <option>Rotate & Scale</option>
+                            <option>Morph Transform</option>
+                            <option>Parallax Effect</option>
+                            <option>3D Rotation</option>
+                        </select>
+                    </div>
+
+                    <!-- Intensity -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Intensity: <span id="intensityValue" class="text-purple-600 font-semibold">50%</span>
+                        </label>
+                        <input type="range" id="intensitySlider" min="0" max="100" value="50" 
+                               class="slider-custom w-full">
+                    </div>
+
+                    <!-- Speed -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Speed: <span id="speedValue" class="text-purple-600 font-semibold">1.0x</span>
+                        </label>
+                        <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1" 
+                               class="slider-custom w-full">
+                    </div>
+
+                    <!-- Smoothness -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Smoothness: <span id="smoothnessValue" class="text-purple-600 font-semibold">5</span>
+                        </label>
+                        <input type="range" id="smoothnessSlider" min="1" max="10" value="5" 
+                               class="slider-custom w-full">
+                    </div>
+
+                    <!-- Loop -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Loop Mode</label>
+                        <div class="flex items-center space-x-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="loop" checked class="mr-2 text-purple-600">
+                                <span>Loop</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="loop" class="mr-2">
+                                <span>Once</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="loop" class="mr-2">
+                                <span>Reverse</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Direction -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Direction</label>
+                        <div class="flex items-center space-x-2">
+                            <button class="control-knob p-2 bg-gray-100 rounded-lg hover:bg-purple-100">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button class="control-knob p-2 bg-gray-100 rounded-lg hover:bg-purple-100">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button class="control-knob p-2 bg-gray-100 rounded-lg hover:bg-purple-100">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button class="control-knob p-2 bg-gray-100 rounded-lg hover:bg-purple-100">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button class="control-knob p-2 bg-purple-600 text-white rounded-lg">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Options -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <button id="advancedToggle" class="text-purple-600 font-medium hover:text-purple-700 transition">
+                        <i class="fas fa-chevron-down mr-2"></i>Advanced Options
+                    </button>
+                    <div id="advancedOptions" class="mt-4 hidden grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Key Points</label>
+                            <input type="number" placeholder="Number of tracking points" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Frame Rate</label>
+                            <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                <option>24 fps</option>
+                                <option>30 fps</option>
+                                <option>60 fps</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preview & Timeline -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+                <i class="fas fa-play-circle mr-2 text-purple-600"></i>Preview & Timeline
+            </h2>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <!-- Preview Area -->
+                <div class="mb-6">
+                    <div class="bg-gray-900 rounded-lg aspect-video flex items-center justify-center relative overflow-hidden">
+                        <canvas id="previewCanvas" class="w-full h-full"></canvas>
+                        <div id="previewPlaceholder" class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-film text-6xl text-gray-600 mb-4"></i>
+                                <p class="text-gray-400">Preview will appear here</p>
+                                <p class="text-sm text-gray-500 mt-2">Upload media to get started</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Play Controls -->
+                        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4 bg-black/50 px-4 py-2 rounded-full">
+                            <button id="playBtn" class="text-white hover:text-purple-400 transition">
+                                <i class="fas fa-play text-xl"></i>
+                            </button>
+                            <button class="text-white hover:text-purple-400 transition">
+                                <i class="fas fa-pause text-xl"></i>
+                            </button>
+                            <button class="text-white hover:text-purple-400 transition">
+                                <i class="fas fa-stop text-xl"></i>
+                            </button>
+                            <div class="text-white text-sm ml-4">
+                                <span id="currentTime">00:00</span> / <span id="totalTime">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span>Timeline</span>
+                        <div class="flex items-center space-x-2">
+                            <button class="hover:text-purple-600 transition">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <span>100%</span>
+                            <button class="hover:text-purple-600 transition">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div class="h-16 bg-gray-200 rounded-lg overflow-hidden">
+                            <div class="timeline-track h-full w-1/3"></div>
+                        </div>
+                        <div class="absolute top-0 left-0 h-16 w-1 bg-purple-600" style="left: 25%;">
+                            <div class="absolute -top-1 -left-2 w-5 h-5 bg-purple-600 rounded-full"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>00:00</span>
+                        <span>00:30</span>
+                        <span>01:00</span>
+                        <span>01:30</span>
+                        <span>02:00</span>
+                    </div>
+                </div>
+
+                <!-- Motion Path Visualization -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Motion Path Preview</h3>
+                    <svg width="100%" height="150" viewBox="0 0 400 150">
+                        <path d="M 20 75 Q 100 25 200 75 T 380 75" 
+                              stroke="#667eea" stroke-width="2" fill="none" class="motion-path"/>
+                        <circle cx="20" cy="75" r="5" fill="#667eea" class="pulse-dot"/>
+                        <circle cx="200" cy="75" r="5" fill="#764ba2" class="pulse-dot"/>
+                        <circle cx="380" cy="75" r="5" fill="#667eea" class="pulse-dot"/>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action Buttons -->
+        <section class="mb-8">
+            <div class="flex flex-wrap gap-4 justify-center">
+                <button id="processBtn" class="px-8 py-3 gradient-bg text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition">
+                    <i class="fas fa-magic mr-2"></i>Process Motion
+                </button>
+                <button class="px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition border-2 border-purple-600">
+                    <i class="fas fa-eye mr-2"></i>Preview Result
+                </button>
+                <button class="px-8 py-3 bg-gray-200 text-gra
